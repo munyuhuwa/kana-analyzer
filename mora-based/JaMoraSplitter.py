@@ -3,42 +3,47 @@ import re
 import ReComposer
 
 class JaMoraSplitter:
-	# class variables
-	moraTable = list()
-	specialMora = list()
-	moraSet = set() # 重複なし
-	moraSplitRe = None
-
-	@classmethod
-	def loadMoraList(cls):
+	def __loadMoraTable():
+		moraTable = list()
 		with open('./mora-table.csv', 'r') as f:
 			for line in f:
 				row = line.rstrip().split('\t')
 				if len(row) < 6:
 					continue
-				JaMoraSplitter.moraTable.append(row[1:6])
-				for item in row[1:6]:
-					cls.moraSet.add(item)
+				moraTable.append(row[1:6])
 				# 6番目以降は無視
+		return moraTable	
+
+	def __loadSpecialMora():
+		specialMora = list()
 		with open('./special-mora.csv', 'r') as f:
 			for line in f:
 				row = line.rstrip().split('\t')
 				if row[0] == '':
 					continue
-				JaMoraSplitter.specialMora.append(row[0])
-				JaMoraSplitter.moraSet.add(row[0])
+				specialMora.append(row[0])
 				# 最初の1列だけ
-		# print('にゅ' in JaMoraSplitter.moraSet)
-		# print('|'.join(list(JaMoraSplitter.moraSet)))
-		re_text = ReComposer.composeReFromWordList(list(cls.moraSet))
-		JaMoraSplitter.moraSplitRe = re.compile(re_text)
-		# print(JaMoraSplitter.moraSplitRe)
-		# print(JaMoraSplitter.moraSplitRe.search('にゅ'))
+		return specialMora
+
+	def __list2DTo1D(l2d):
+		l1d = list()
+		for row in l2d:
+			l1d += row
+		return l1d
+	
+	# class variables
+	moraTable = __loadMoraTable()
+	specialMora = __loadSpecialMora()
+	moraSet = set(__list2DTo1D(moraTable)+specialMora)
+	moraSplitRe = re.compile(ReComposer.composeReFromWordList(list(moraSet)))
 
 	def __new__(cls):
 		self = super().__new__(cls)
 		# print( "__new__()  myId={}".format( id( self )))
-		self.loadMoraList()
+		# print('にゅ' in JaMoraSplitter.moraSet)
+		# print(JaMoraSplitter.moraTable)
+		# print(JaMoraSplitter.moraSplitRe)
+		# print(JaMoraSplitter.moraSplitRe.search('にゅ'))
 		return self
 
 	def splitTextByMora(self, text, delimitter=' '):
