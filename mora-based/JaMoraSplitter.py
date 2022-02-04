@@ -33,6 +33,8 @@ class JaMoraSplitter:
 	
 	# class variables
 	moraTable = __loadMoraTable()
+	danList = moraTable[0] # あいうえお
+	gyouList = [row[0] for row in moraTable] # あかさたな...
 	specialMora = __loadSpecialMora()
 	moraSet = set(__list2DTo1D(moraTable)+specialMora)
 	moraSplitRe = re.compile(ReComposer.composeReFromWordList(list(moraSet)))
@@ -46,12 +48,80 @@ class JaMoraSplitter:
 		# print(JaMoraSplitter.moraSplitRe.search('にゅ'))
 		return self
 
-	def splitTextByMora(self, text, delimitter=' '):
+	# ホワイトリストにあるモーラにのみコールバックを適用
+	def splitWithCallbackForValidMora(self, text, func):
+		parts = []
+		tmpIdx = 0
+		for m in re.finditer(JaMoraSplitter.moraSplitRe, text):
+			if m.start() > tmpIdx:
+				parts.append(text[tmpIdx:m.start()])
+			parts.append(func(text[m.start():m.end()]))# ここに適用
+			tmpIdx = m.end()
+		return parts
+
+	def insertSeparatorIntoText(self, text, delimitter=','):
 		if not isinstance(text, str):
 			raise TypeError('text: str')
-		for m in re.finditer(JaMoraSplitter.moraSplitRe, text):
-			print(m)
-		return text
+		parts = self.splitWithCallbackForValidMora(text, lambda x: x)
+		return delimitter.join(parts)
+
+	# 引数は2次元形式の表にあるモーラのみ可
+	def tableIndice(self, query):
+		for i in range(len(JaMoraSplitter.moraTable)):
+			row = JaMoraSplitter.moraTable[i]
+			for j in range(len(row)):
+				if row[j] == query:
+					return (i, j,)
+		raise ValueError('')
+
+	# 引数はあいうえおのみ可
+	def danIndex(self, query):
+		return JaMoraSplitter.danList.index(query)
+
+	# 引数はあかさたな...のみ可 
+	def gyouIndex(self, query):
+		return JaMoraSplitter.gyouList.index(query)
+
+	def __moveDan(self, srcIdx, dstIdx, mora):
+		try:
+			idc = self.tableIndice(mora)
+		except:
+			return mora
+		if idc[1] == srcIdx:
+			return JaMoraSplitter.moraTable[idc[0]][dstIdx]
+		else:
+			return mora
+
+	def __moveGyou(self, srcIdx, dstIdx, mora):
+		try:
+			idc = self.tableIndice(mora)
+		except:
+			return mora
+		if idc[0] == srcIdx:
+			return JaMoraSplitter.moraTable[dstIdx][idc[1]]
+		else:
+			return mora 
+
+	def moveDanText(self, src, dst, text):
+		try:
+			srcIdx = self.danIndex(src)
+			dstIdx = self.danIndex(dst)
+		except:
+			return text
+		return ''.join(self.splitWithCallbackForValidMora(text, lambda x: self.__moveDan(srcIdx, dstIdx, x)))
+
+	def moveGyouText(self, src, dst, text):
+		try:
+			srcIdx = self.gyouIndex(src)
+			dstIdx = self.gyouIndex(dst)
+		except:
+			return text
+		return ''.join(self.splitWithCallbackForValidMora(text, lambda x: self.__moveGyou(srcIdx, dstIdx, x)))
 
 
-# print(JaMoraSplitter().splitTextByMora('こんてぃにゅー'))
+
+# print(JaMoraSplitter().insertSeparatorIntoText('こんてぃにゅー'))
+# print(JaMoraSplitter().tableIndice('ふぁ'))
+# print(JaMoraSplitter().danIndex('う'))
+# print(JaMoraSplitter().gyouIndex('にゃ'))
+# print(JaMoraSplitter().moveGyouText('さ', 'しゃ', 'すごいのぉ'))
