@@ -49,20 +49,23 @@ class JaMoraSplitter:
 		return self
 
 	# ホワイトリストにあるモーラにのみコールバックを適用
-	def splitWithCallbackForValidMora(self, text, func):
+	def splitWithCallbackForValidMora(self, text, func=None):
 		parts = []
 		tmpIdx = 0
 		for m in re.finditer(JaMoraSplitter.moraSplitRe, text):
 			if m.start() > tmpIdx:
 				parts.append(text[tmpIdx:m.start()])
-			parts.append(func(text[m.start():m.end()]))# ここに適用
+			if func is None:
+				parts.append(text[m.start():m.end()])
+			else:
+				parts.append(func(text[m.start():m.end()]))# ここに適用
 			tmpIdx = m.end()
 		return parts
 
 	def insertSeparatorIntoText(self, text, delimitter=','):
 		if not isinstance(text, str):
 			raise TypeError('text: str')
-		parts = self.splitWithCallbackForValidMora(text, lambda x: x)
+		parts = self.splitWithCallbackForValidMora(text, None)
 		return delimitter.join(parts)
 
 	# 引数は2次元形式の表にあるモーラのみ可
@@ -118,10 +121,34 @@ class JaMoraSplitter:
 			return text
 		return ''.join(self.splitWithCallbackForValidMora(text, lambda x: self.__moveGyou(srcIdx, dstIdx, x)))
 
-
+	def isVowelCommon(self, text1, text2):
+		mList1 = [t[0] for t in re.findall(JaMoraSplitter.moraSplitRe, text1)]
+		mList2 = [t[0] for t in re.findall(JaMoraSplitter.moraSplitRe, text2)]
+		if len(mList1) != len(mList2):
+			return False
+		flg = True
+		for i in range(len(mList1)):
+			try:
+				idc1 = self.tableIndice(mList1[i])
+				idc2 = self.tableIndice(mList2[i])
+				# print('%d %d' % idc1)
+				# print('%d %d' % idc2)
+				if idc1[1] != idc2[1]:
+					flg = False
+					break
+			except:
+				# 五十音表にないときは完全一致が必要
+				if mList1[i] != mList2[i]:
+					flg = False
+					break
+		return flg
 
 # print(JaMoraSplitter().insertSeparatorIntoText('こんてぃにゅー'))
 # print(JaMoraSplitter().tableIndice('ふぁ'))
 # print(JaMoraSplitter().danIndex('う'))
 # print(JaMoraSplitter().gyouIndex('にゃ'))
 # print(JaMoraSplitter().moveGyouText('さ', 'しゃ', 'すごいのぉ'))
+# print(JaMoraSplitter().isVowelCommon('らーめん', 'かーてん'))
+# print(JaMoraSplitter().isVowelCommon('らーめん', 'かんてん'))
+# print(JaMoraSplitter().isVowelCommon('ぐうぜん', 'りゅうねん'))
+# print(JaMoraSplitter().isVowelCommon('あけちみつひで', 'だけにみついで'))
